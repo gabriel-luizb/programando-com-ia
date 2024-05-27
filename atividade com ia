@@ -1,0 +1,174 @@
+import java.util.Scanner;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.FileReader;
+
+class Trabalhador {
+    String nome;
+    double salarioBruto;
+    double descontoINSS;
+    int numDependentes;
+    double descontoIRRF;
+    String CPF;
+    String CEP;
+
+    public Trabalhador(String nome, double salarioBruto, double descontoINSS, int numDependentes, double descontoIRRF, String CPF, String CEP) {
+        this.nome = nome;
+        this.salarioBruto = salarioBruto;
+        this.descontoINSS = descontoINSS;
+        this.numDependentes = numDependentes;
+        this.descontoIRRF = descontoIRRF;
+        this.CPF = CPF;
+        this.CEP = CEP;
+    }
+
+    public double getSalarioLiquido() {
+        return salarioBruto - descontoINSS - descontoIRRF;
+    }
+}
+
+public class Main {
+
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        // Leitura de dados do trabalhador
+        System.out.print("Nome: ");
+        String nome = scanner.nextLine();
+        System.out.print("Salário Bruto: ");
+        double salarioBruto = scanner.nextDouble();
+        System.out.print("Desconto INSS (já calculado): ");
+        double descontoINSS = scanner.nextDouble();
+        System.out.print("Número de dependentes: ");
+        int numDependentes = scanner.nextInt();
+        scanner.nextLine(); // Consumir a nova linha
+        String CPF;
+        do {
+            System.out.print("CPF: ");
+            CPF = scanner.nextLine();
+        } while (!validarCPF(CPF));
+        String CEP;
+        do {
+            System.out.print("CEP: ");
+            CEP = scanner.nextLine();
+        } while (!validarCEP(CEP));
+
+        // Cálculo do desconto do IRRF
+        double descontoIRRF = calcularDescontoIRRF(salarioBruto, descontoINSS, numDependentes);
+
+        // Criação do objeto Trabalhador
+        Trabalhador trabalhador = new Trabalhador(nome, salarioBruto, descontoINSS, numDependentes, descontoIRRF, CPF, CEP);
+
+        // Exibição do resultado
+        System.out.println("\nNome: " + trabalhador.nome);
+        System.out.println("Salário Bruto: R$ " + String.format("%.2f", trabalhador.salarioBruto));
+        System.out.println("Desconto INSS: R$ " + String.format("%.2f", trabalhador.descontoINSS));
+        System.out.println("Desconto IRRF: R$ " + String.format("%.2f", trabalhador.descontoIRRF));
+        System.out.println("Salário Líquido: R$ " + String.format("%.2f", trabalhador.getSalarioLiquido()));
+
+        // Gravação dos dados em arquivo
+        gravaDadosEmArquivo(trabalhador);
+    }
+
+    // Função para calcular o desconto do IRRF
+    private static double calcularDescontoIRRF(double salarioBruto, double descontoINSS, int numDependentes) {
+        // Cálculo da base de cálculo do IR
+        double baseCalculoIR = salarioBruto - descontoINSS;
+
+        // Cálculo da dedução por dependentes
+        double deducaoDependentes = numDependentes * 189.59;
+
+        // Cálculo da base de cálculo final do IR
+        baseCalculoIR -= deducaoDependentes;
+
+        // Cálculo da alíquota do IR
+        double aliquotaIR = calcularAliquotaIR(baseCalculoIR) / 100.0;
+
+        // Cálculo do desconto do IRRF
+        return baseCalculoIR * aliquotaIR;
+    }
+
+    // Função para calcular a alíquota do IR (já implementada anteriormente)
+    private static double calcularAliquotaIR(double baseCalculoIR) {
+        if (baseCalculoIR <= 1903.98) {
+            return 0.0;
+        } else if (baseCalculoIR <= 2826.65) {
+            return 7.5;
+        } else if (baseCalculoIR <= 3751.05) {
+            return 15.0;
+        } else if (baseCalculoIR <= 4675.88) {
+            return 22.5;
+        } else {
+            return 27.5;
+        }
+    }
+
+    // Função para gravar dados em arquivo
+    private static void gravaDadosEmArquivo(Trabalhador trabalhador) {
+        boolean trabalhadorExistente = false;
+        StringBuilder arquivoAtualizado = new StringBuilder();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader("dados_trabalhador.txt"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("Nome: ") && line.substring(6).equals(trabalhador.nome)) {
+                    // Trabalhador encontrado, sobrepor os dados
+                    arquivoAtualizado.append("Nome: ").append(trabalhador.nome).append("\n");
+                    arquivoAtualizado.append("Salário Bruto: R$ ").append(String.format("%.2f", trabalhador.salarioBruto)).append("\n");
+                    arquivoAtualizado.append("Desconto INSS: R$ ").append(String.format("%.2f", trabalhador.descontoINSS)).append("\n");
+                    arquivoAtualizado.append("Desconto IRRF: R$ ").append(String.format("%.2f", trabalhador.descontoIRRF)).append("\n");
+                    arquivoAtualizado.append("Salário Líquido: R$ ").append(String.format("%.2f", trabalhador.getSalarioLiquido())).append("\n");
+                    arquivoAtualizado.append("CPF: ").append(trabalhador.CPF).append("\n");
+                    arquivoAtualizado.append("CEP: ").append(trabalhador.CEP).append("\n\n");
+                    trabalhadorExistente = true;
+                } else {
+                    arquivoAtualizado.append(line).append("\n");
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Ocorreu um erro ao gravar os dados em arquivo.");
+            return;
+        }
+
+        // Se o trabalhador não existir no arquivo, adiciona ao final
+        if (!trabalhadorExistente) {
+            arquivoAtualizado.append("Nome: ").append(trabalhador.nome).append("\n");
+            arquivoAtualizado.append("Salário Bruto: R$ ").append(String.format("%.2f", trabalhador.salarioBruto)).append("\n");
+            arquivoAtualizado.append("Desconto INSS: R$ ").append(String.format("%.2f", trabalhador.descontoINSS)).append("\n");
+            arquivoAtualizado.append("Desconto IRRF: R$ ").append(String.format("%.2f", trabalhador.descontoIRRF)).append("\n");
+            arquivoAtualizado.append("Salário Líquido: R$ ").append(String.format("%.2f", trabalhador.getSalarioLiquido())).append("\n");
+            arquivoAtualizado.append("CPF: ").append(trabalhador.CPF).append("\n");
+            arquivoAtualizado.append("CEP: ").append(trabalhador.CEP).append("\n\n");
+        }
+        try (FileWriter writer = new FileWriter("dados_trabalhador.txt")){
+            writer.write(arquivoAtualizado.toString());
+        } catch (IOException e) {
+            System.out.println("Ocorreu um erro ao gravar os dados em arquivo.");
+        }
+    }
+    // Função para validar o CPF
+    private static boolean validarCPF(String CPF){
+        if (CPF.length() != 11) {
+            return false;
+        }
+        for (int i = 0; i < CPF.length(); i++) {
+            if (!Character.isDigit(CPF.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+    // Função para validar o CEP
+    private static boolean validarCEP(String CEP){
+        if (CEP.length() != 8) {
+            return false;
+        }
+        for (int i = 0; i < CEP.length(); i++) {
+            if (!Character.isDigit(CEP.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
